@@ -1,5 +1,7 @@
 import discord
 import os
+import openai
+from openai import OpenAI
 from discord import app_commands
 from dotenv import load_dotenv
 from collections import defaultdict
@@ -44,7 +46,21 @@ async def on_message(message: discord.Message):
     if message.guild.id in oui_list and message.author.id in oui_list[message.guild.id]:
         if cat_mentioned(message, my_model, classes, num_px):
             await message.channel.send("Cat mentioned")
-
+        if message.content.lower().startswith("ouibot, "):
+            prompt = message.content[8:]
+            try:
+                response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant, enthusiastic about cats. Respond like a cat lover in a single sentence."},
+                        {"role": "user", "content": prompt},
+                    ]
+                )
+                
+                await message.channel.send(response.choices[0].message.content);
+            except openai.RateLimitError:
+                await message.channel.send("I'm a bit overwhelmed at the moment. Please try asking your question again later.")
 load_dotenv()
 
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 client.run(os.getenv("DISCORD_BOT_TOKEN"))
